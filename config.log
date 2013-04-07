@@ -1,0 +1,48 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:568: checking for a BSD compatible install
+configure:621: checking whether build environment is sane
+configure:678: checking whether make sets ${MAKE}
+configure:724: checking for working aclocal
+configure:737: checking for working autoconf
+configure:750: checking for working automake
+configure:763: checking for working autoheader
+configure:776: checking for working makeinfo
+configure:797: checking for gcc
+configure:910: checking whether the C compiler (gcc  ) works
+configure:926: gcc -o conftest    conftest.c  1>&5
+configure:952: checking whether the C compiler (gcc  ) is a cross-compiler
+configure:957: checking whether we are using GNU C
+configure:985: checking whether gcc accepts -g
+configure:1028: checking for a BSD compatible install
+configure:1081: checking how to run the C preprocessor
+configure:1161: checking for ANSI C header files
+configure:1266: checking whether make sets ${MAKE}
+configure:1297: checking for fcntl.h
+configure:1297: checking for limits.h
+configure:1297: checking for malloc.h
+configure:1297: checking for sys/ioctl.h
+configure:1297: checking for sys/time.h
+configure:1297: checking for unistd.h
+configure:1335: checking for working const
+configure:1410: checking for inline
+configure:1450: checking for pid_t
+configure:1483: checking for size_t
+configure:1516: checking whether time.h and sys/time.h may both be included
+configure:1554: checking for working alloca.h
+configure:1587: checking for alloca
+configure:1787: checking whether gcc needs -traditional
+configure:1833: checking for 8-bit clean memcmp
+configure:1869: checking return type of signal handlers
+configure:1913: checking for ftime
+configure:1913: checking for gettimeofday
+configure:1913: checking for select
+configure:1913: checking for strdup
+configure:1913: checking for strstr
+configure:1913: checking for strtol
+configure:2007: checking for aalib-config
+configure:2042: checking for AALIB - version >= 1.4.0
+configure:2127: gcc -o conftest -g -O2 -I/usr/local/Cellar/aalib/1.4rc4/include   conftest.c  -L/usr/local/Cellar/aalib/1.4rc4/lib -laa -lm -lncurses 1>&5
+configure:2249: checking for libmikmod-config
+configure:2284: checking for libmikmod - version >= 3.0.0

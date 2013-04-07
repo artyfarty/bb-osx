@@ -1,0 +1,2 @@
+/*@BOTTOM@*/
+#undef HAVE_LIBMIKMOD
