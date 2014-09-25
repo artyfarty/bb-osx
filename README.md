@@ -3,6 +3,14 @@ What is this fork
 I simply applied a couple of fixes found on the internet to make it buildable under Mountain Lion.
 Still requires aalib (`brew install aalib`)
 
+How to build:
+
+```
+brew install lib libmikmod
+./configure && make
+```
+
+
 What does this software do then ?
 =================================
 
