@@ -15,3 +15,9 @@
 *.exe
 *.out
 *.app
+
+aconfig.h
+config.log
+config.status
+Makefile
+bb

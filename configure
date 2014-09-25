@@ -2242,42 +2242,6 @@ fi
      fi
   fi
 
-  # Extract the first word of "libmikmod-config", so it can be a program name with args.
-set dummy libmikmod-config; ac_word=$2
-echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:2249: checking for $ac_word" >&5
-if eval "test \"`echo '$''{'ac_cv_path_LIBMIKMOD_CONFIG'+set}'`\" = set"; then
-  echo $ac_n "(cached) $ac_c" 1>&6
-else
-  case "$LIBMIKMOD_CONFIG" in
-  /*)
-  ac_cv_path_LIBMIKMOD_CONFIG="$LIBMIKMOD_CONFIG" # Let the user override the test with a path.
-  ;;
-  ?:/*)			 
-  ac_cv_path_LIBMIKMOD_CONFIG="$LIBMIKMOD_CONFIG" # Let the user override the test with a dos path.
-  ;;
-  *)
-  IFS="${IFS= 	}"; ac_save_ifs="$IFS"; IFS=":"
-  ac_dummy="$PATH"
-  for ac_dir in $ac_dummy; do 
-    test -z "$ac_dir" && ac_dir=.
-    if test -f $ac_dir/$ac_word; then
-      ac_cv_path_LIBMIKMOD_CONFIG="$ac_dir/$ac_word"
-      break
-    fi
-  done
-  IFS="$ac_save_ifs"
-  test -z "$ac_cv_path_LIBMIKMOD_CONFIG" && ac_cv_path_LIBMIKMOD_CONFIG="no"
-  ;;
-esac
-fi
-LIBMIKMOD_CONFIG="$ac_cv_path_LIBMIKMOD_CONFIG"
-if test -n "$LIBMIKMOD_CONFIG"; then
-  echo "$ac_t""$LIBMIKMOD_CONFIG" 1>&6
-else
-  echo "$ac_t""no" 1>&6
-fi
-
   min_libmikmod_version=3.0.0
   echo $ac_n "checking for libmikmod - version >= $min_libmikmod_version""... $ac_c" 1>&6
 echo "configure:2284: checking for libmikmod - version >= $min_libmikmod_version" >&5
