@@ -1,14 +1,14 @@
 What is this fork
 =================
-I simply applied a couple of fixes found on the internet to make it buildable under Mountain Lion.
-Still requires aalib (`brew install aalib`)
+This is AA-Project's classic Demo "BB" with some fixes applied to allow it to build on modern Macs and run at absurdly high resolutions (2880x1800 text mode!).
 
 How to build:
 
 ```
-brew install lib libmikmod
-./configure && make
+brew install libmikmod aalib
+./configure; make; make install
 ```
+Note: `./configure` sometimes needs the path to `libmikmod` passed manually. This can be done with `--with-libmikmod-prefix=[prefix]`.
 
 
 What does this software do then ?
