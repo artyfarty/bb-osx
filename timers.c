@@ -21,6 +21,7 @@
  *
  * All ugly architecture depended timing code is separated into this file..
  */
+#include <stdlib.h>
 #ifdef _plan9_
 #include <u.h>
 #include <stdio.h>

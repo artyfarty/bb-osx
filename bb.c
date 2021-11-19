@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <aalib.h>
+#include <time.h>
 #include "bb.h"
 
 int finish_stuff, starttime, endtime;
