@@ -22,6 +22,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include "bb.h"
 
 static int cursor_x, cursor_y;

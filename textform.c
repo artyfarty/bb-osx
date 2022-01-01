@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <aalib.h>
+#include <stdlib.h>
 #include "bb.h"
 #define MAXLINES 10000
 static char *text = "#cWell we've reached the end of this demo. But #bnot#n the #bREAL END#n because\n\n"
