@@ -4,12 +4,14 @@ This is AA-Project's classic Demo "BB" with some fixes applied to allow it to bu
 
 How to build:
 
+First clone/downlaod this repository
 ```
+cd bb-osx
 brew install libmikmod aalib
 ./configure; make; make install
 ```
 Note: `./configure` sometimes needs the path to `libmikmod` passed manually. This can be done with `--with-libmikmod-prefix=[prefix]`.
-
+Note: Audio may not play, this looks like a bug.
 
 What does this software do then ?
 =================================
