@@ -1,0 +1,126 @@
+.TH NAME SECTION 
+.\" NAME should be all caps, SECTION should be 1-8, maybe w/ subsection
+.\" other parms are allowed: see man(7), man(1)
+.SH NAME
+bb \- The aalib demo
+.SH SYNOPSIS
+.B bb
+.I "[options]"
+.br
+.SH "DESCRIPTION"
+The 
+.BR bb ,
+command show an high quality audio-visual demonstration for your text
+terminal
+.SH OPTIONS
+A summary of options are included below.
+For a complete description type 
+.BR bb 
+.BR -help .
+.TP
+.B \-help
+Show summary of options.
+.TP
+.B \-loop
+play demo in infinite loop
+.TP
+.B \-driver
+select driver available drivers:linux slang X11 stdout stderr
+.TP
+.B \-kbddriver
+select keyboard driver available drivers:slang X11 stdin
+.TP
+.B \-mousedriver
+select mouse driver available drivers:X11 gpm dos
+.TP
+.B \-width
+set width
+.TP
+.B \-height
+set height
+.TP
+.B \-minwidth
+set minimal width
+.TP
+.B \-minheight
+set minimal height
+.TP
+.B \-maxwidth
+set maximal width
+.TP
+.B \-maxheight
+set maximal height
+.TP
+.B \-recwidth
+set recomended width
+.TP
+.B \-recheight
+set recomended height
+.TP
+.B \-dim
+enable usage of dim (half bright) attribute
+.TP
+.B \-bold
+enable usage of bold (double bright) attribute
+.TP
+.B \-reverse
+enable usage of reverse attribute
+.TP
+.B \-normal
+enable usage of normal attribute
+.TP
+.B \-boldfont
+enable usage of boldfont attrubute
+.TP
+.B \-no<attr>
+disable (i.e -nobold)
+.TP
+.B \-extended
+use all 256 characters
+.TP
+.B \-eight
+use eight bit ascii
+.TP
+.B \-font <font>
+select font(This option have effect just on hardwares
+where aalib is unable to determine current font
+available fonts:vga8 vga9 mda14 vga14 X8x13 X8x16
+X8x13bold vgagl8 line
+.TP
+.B \-inverse
+enable inverse rendering
+.TP
+.B \-noinverse
+disable inverse rendering
+.TP
+.B \-bright <val>
+set bright (0-255)
+.TP
+.B \-contrast <val>
+set contrast (0-255)
+.TP
+.B \-gamma <val>
+set gamma correction value(0-1)
+.TP
+.B \-nodither
+disable dithering
+.TP
+.B \-floyd_steinberg
+floyd steinberg dithering
+.TP
+.B \-error_distribution
+error distribution dithering
+.TP
+.B \-random <val>
+set random dithering value(0-inf)
+.TP
+.B \-dimmul <val>
+multiply factor for dim color (5.3)
+.TP
+.B \-boldmul <val>
+multiply factor for dim color (2.7)
+.SH SEE ALSO
+See the files in /usr/doc/aalib*
+.SH AUTHOR
+This manual page was written by Michael Bramer <grisu@debian.org>,
+for the Debian GNU/Linux system (but may be used by others).

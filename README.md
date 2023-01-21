@@ -2,14 +2,17 @@ What is this fork
 =================
 This is AA-Project's classic Demo "BB" with some fixes applied to allow it to build on modern Macs and run at absurdly high resolutions (2880x1800 text mode!).
 
-How to build:
+How to build and run:
 
+First clone/downlaod this repository
 ```
+cd bb-osx
 brew install libmikmod aalib
 ./configure; make; make install
+bb
 ```
 Note: `./configure` sometimes needs the path to `libmikmod` passed manually. This can be done with `--with-libmikmod-prefix=[prefix]`.
-
+Note: Audio may not play, this looks like a bug.
 
 What does this software do then ?
 =================================
