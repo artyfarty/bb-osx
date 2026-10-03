@@ -11,8 +11,72 @@ brew install libmikmod aalib
 ./configure; make; make install
 bb
 ```
-Note: `./configure` sometimes needs the path to `libmikmod` passed manually. This can be done with `--with-libmikmod-prefix=[prefix]`.
-Note: Audio may not play, this looks like a bug.
+
+Works on both Intel and Apple Silicon (ARM64) Macs. The build requires
+autoconf/automake/libtool-era tools only if regenerating; a checked-in
+`configure` script is provided, so no autotools are needed to build.
+
+Notes:
+- `./configure` usually finds `libmikmod` automatically. If it does not,
+  pass the path manually: `--with-libmikmod-prefix=$(brew --prefix libmikmod)`.
+- The codebase is pre-C99; the build adds `-std=gnu89
+  -Wno-implicit-function-declaration` automatically so no manual `CFLAGS`
+  are required.
+
+Smooth rendering (curses driver + frame sync)
+=============================================
+
+The stock aalib ships a curses driver that breaks on modern macOS
+terminals: it read the private `stdscr->_maxx` / `_maxy` fields (hard-coded
+an 80-column screen), dropped bold/dim/reverse, and emitted no frame
+synchronization — so the demo tore and flickered.
+
+This repo ships a fixed aalib under `aalib-patch/`:
+
+- `aalib-curses-fix.patch` — `getmaxyx()` for size detection, `termattrs()`
+  for bold/dim/reverse, and a per-frame **DEC private mode 2026
+  "synchronized output"** wrapper (`\e[?2026h` … `\e[?2026l`) so each frame
+  is presented atomically at the retrace instead of tearing. Terminals that
+  don't implement 2026 ignore the escape, so it's safe everywhere.
+- `build-aalib.sh` — applies the patch (plus the Homebrew aalib
+  modernization patch) to a fresh `aalib-1.4.0` source tree, configures with
+  the ncurses driver, and builds `libaa.a`.
+
+Build the fixed aalib and link bb against it. The upstream tarball is
+`aalib-1.4rc5.tar.gz` (it extracts to a directory named `aalib-1.4.0`); get
+it from https://sourceforge.net/projects/aa-project/ (aa-lib 1.4rc5):
+```
+tar xzf aalib-1.4rc5.tar.gz        # -> aalib-1.4.0/
+./aalib-patch/build-aalib.sh aalib-1.4.0
+# link bb with:
+#   -L aalib-1.4.0/src/.libs -laa -L $(brew --prefix ncurses)/lib -lncurses
+```
+Verified: 30 test frames produced exactly 30 balanced 2026 begin/end pairs
+(one per frame), and the demo renders full-width with bold/dim/reverse and no
+tearing on a color terminal.
+
+**Required for interactive `bb 6`.** The stock Homebrew aalib is built
+without the curses mouse driver, so `aa_autoinitmouse` finds no driver, the
+terminal mouse mask is never armed, and `bb 6` has no cursor to drive — it
+prints "Mouse driver unavailable" and falls back to the autopilot zoom.
+`build-aalib.sh` configures aalib with `--with-curses-driver=yes`, which
+enables `CURSES_MOUSEDRIVER` and the `curses` mouse driver; link `bb` against
+that `libaa.a` to get cursor-driven zoom (button 1 in / button 2 out,
+anchored at the cursor). Verified: the custom aalib reports `MOUSE_DRIVER_OK
+curses` and arms the ncurses mouse mask; the stock lib reports
+`NO_MOUSE_DRIVER`.
+
+Standalone bonus scenes:
+========================
+
+The three XaoS fractal parts of act 2 can be run on their own (each
+animates in real time, then exits; add `-loop` to repeat):
+
+```
+bb 6    # fractal zoom (mouse-driven; needs the fixed aalib, see above)
+bb 7    # julia sequence
+bb 9    # julia morph
+```
 
 What does this software do then ?
 =================================

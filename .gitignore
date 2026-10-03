@@ -17,7 +17,21 @@
 *.app
 
 aconfig.h
+config.cache
 config.log
 config.status
 Makefile
 bb
+stamp-h1
+.deps/
+autom4te.cache/
+
+# aalib built locally by aalib-patch/build-aalib.sh (not shipped)
+aalib-1.4.0/
+
+# scratch debug probes
+bb-mouse
+drvmouse.py
+mouseprobe.c
+probe-mouse
+probe-stock

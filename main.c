@@ -21,7 +21,8 @@
  * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <unistd.h>
+#include <signal.h>
+#include <stdlib.h>
 #include "timers.h"
 #include "bb.h"
 #ifdef HAVE_LIBMIKMOD
@@ -145,12 +146,25 @@ ptable ()
   cont = i + 1;
 }
 #endif
+static void
+sigint_handler (int sig)
+{
+  (void) sig;
+  /* Restore the terminal (e.g. curses endwin/nl) before dying, otherwise a
+   * Ctrl+C leaves the terminal in raw/no-newline mode. */
+  if (context)
+    aa_close (context);
+  exit (1);
+}
 
 int
 main (int argc, char *argv[])
 {
   int p = 0;
   int retval;
+
+  signal (SIGINT, sigint_handler);
+  signal (SIGTERM, sigint_handler);
 
   bbinit (argc, argv);
 #ifdef HAVE_LIBMIKMOD

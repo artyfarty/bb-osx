@@ -39,7 +39,10 @@ void do_julia(zoom_context * context, register number_t pre, register number_t p
 {
     int i, i1, i2, j, x, y, scanline = context->scanline;
     int iter;
-    number_t rp = 0, ip = 0 /*, t */ ;
+    number_t rp = 0, ip = 0;
+#ifdef _RED_
+    register number_t t = 0;
+#endif
     register number_t zre, zim, im, xdelta, ydelta, br, tmp, range,
      rangep;
     number_t xstep, ystep;

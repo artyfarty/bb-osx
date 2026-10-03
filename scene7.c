@@ -86,6 +86,7 @@ static int incalculation;
 static int fastmode = 2;
 static int interruptiblemode;
 static int autopilot = 0;
+static int interactive = 0;	/* user drives with aalib mouse (set by scene6(1)) */
 static double maxstep = MAXSTEP, speedup = STEP;
 static zoom_context *zcontext;
 static double mul;
@@ -307,16 +308,34 @@ static int ui_mouse()
     int mousebuttons = 0;
     int inmovement = 0, slowdown = 1;
     static double autopilot_counter = 0;
-    static number_t oldx = 0, oldy = 0;
     static int dirty = 0;
-    static int pressed;
 
 
     if (tbreak)
 	mul = 1.0;
     if (dirty)
 	ui_do_fractal(NEW_IMAGE), ui_tbreak(), dirty = 0;
-    if (autopilot) {
+    if (interactive) {
+	/* User-driven mode (standalone "bb 6"): read the real aalib mouse
+	 * state. bbupdate() (via aa_getkey -> aa_getevent) refreshes
+	 * context->mousex/mousey/buttons every frame. The curses mouse driver
+	 * reports position in CHARACTER CELLS (ncurses getmouse m.x/m.y), while
+	 * xstoc()/ystoc() below expect PIXELS (they divide by zcontext->width/
+	 * height, which are aa_imgwidth/height). Convert cells -> pixels via
+	 * context->mulx/muly (pixels per cell) or the zoom anchor will be pinned
+	 * to the upper-left corner instead of following the cursor. Buttons: the
+	 * driver reports AA_BUTTON1/2/3 (1/2/4); translate to this file's
+	 * BUTTON1/2/3 (256/...). */
+	int rawb = context->buttons;
+	mousex = (context->mousex + 1) * context->mulx - (context->mulx >> 1);
+	mousey = (context->mousey + 1) * context->muly - (context->muly >> 1);
+	if (rawb & AA_BUTTON1)
+	    mousebuttons |= BUTTON1;
+	if (rawb & AA_BUTTON2)
+	    mousebuttons |= BUTTON2;
+	if (rawb & AA_BUTTON3)
+	    mousebuttons |= BUTTON3;
+    } else if (autopilot) {
 	static int mousex1, mousey1, mousebuttons1;
 	autopilot_counter += mul;
 	while (autopilot_counter > 1) {
@@ -339,28 +358,14 @@ static int ui_mouse()
 	    step += speedup * 2 * mul, slowdown = 0;
 	    inmovement = 1;
 	    break;
-	case BUTTON2:		/* button 2 */
-	    {
-		number_t x = xstoc(mousex), y = ystoc(mousey);
-		if (pressed && (oldx != x || oldy != y)) {
-		    zcontext->s.nc -= x - oldx;
-		    zcontext->s.mc -= x - oldx;
-		    zcontext->s.ni -= y - oldy;
-		    zcontext->s.mi -= y - oldy;
-		    if (!step) {
-			ui_do_fractal(ANIMATION), ui_tbreak();
-		    }
-		}
-		pressed = 1;
-		oldx = xstoc(mousex), oldy = ystoc(mousey);
-	    }
+	case BUTTON2:		/* button 2: zoom out, anchored at the cursor */
+	    step += speedup * 2 * mul, slowdown = 0;
+	    inmovement = 1;
 	    break;
 	default:
 	    break;
 	}
     }
-    if (!(mousebuttons & BUTTON2))
-	pressed = 0;
     if (slowdown) {
 	if (step > 0) {
 	    if (step < speedup * mul)
@@ -401,14 +406,21 @@ static int ui_mouse()
 static void main_loop(void)
 {
     int inmovement = 1;
-    while (TIME < endtime && !finish_stuff) {
-	if (TIME < starttime + BTIME) {
-	    params->bright = 255 - (TIME - starttime) * 255 / BTIME;
-	}
-	else
-	    params->bright = 0;
-	if (TIME > endtime - BTIME1) {
-	    params->bright = -255 + (endtime - TIME) * 255 / BTIME1;
+    /* Interactive mode has no fixed endtime: run until the user quits ('q'
+     * / ESC sets finish_stuff via bbupdate, polled each frame by ui_waitfunc).
+     * The time-based fade-in/out only makes sense for the timed autopilot run. */
+    while ((interactive || TIME < endtime) && !finish_stuff) {
+	if (interactive)
+	    bbupdate();	/* poll q/s/ESC even when the fractal is idle */
+	if (!interactive) {
+	    if (TIME < starttime + BTIME) {
+		params->bright = 255 - (TIME - starttime) * 255 / BTIME;
+	    }
+	    else
+		params->bright = 0;
+	    if (TIME > endtime - BTIME1) {
+		params->bright = -255 + (endtime - TIME) * 255 / BTIME1;
+	    }
 	}
 	if (zcontext->uncomplette) {
 	    inmovement = 1;
@@ -454,7 +466,7 @@ static void mydraw1()
 }
 
 
-void scene6(void)
+void scene6(int interactive_)
 {
     int width, height, scanline;
     int i, formula = 0;
@@ -463,6 +475,7 @@ void scene6(void)
     incalculation = 0;
     fastmode = 2;
     interruptiblemode = 0;
+    interactive = interactive_;
     autopilot = 0;
     maxstep = MAXSTEP;
     speedup = STEP;
@@ -476,7 +489,7 @@ void scene6(void)
     buffer1 = context->imagebuffer;
     buffer2 = malloc(width * height);
     endtime = starttime + ETIME1;
-    params->bright = -255;
+    params->bright = interactive ? 0 : -255;	/* interactive: no fade-in, show full brightness */
 
     zcontext = make_context(width, height, scanline, 0, 1, flip_buffers, ui_waitfunc, buffer1, buffer2, get_pixelwidth(width), get_pixelheight(height));
     if (!zcontext) {
@@ -497,10 +510,14 @@ void scene6(void)
     zcontext->coloringmode = 0;
     zcontext->plane = 0;
     ui_do_fractal(NEW_IMAGE);
-    ui_autopilot();
-    speedup = 1 * STEP;
-    maxstep *= 5;
-    step = -maxstep;
+    if (!interactive) {
+	/* Autopilot run: start self-driving and kick off the initial zoom-in.
+	 * In interactive mode the user drives it: no autopilot, no auto-zoom. */
+	ui_autopilot();
+	speedup = 1 * STEP;
+	maxstep *= 5;
+	step = -maxstep;
+    }
     tl_process_group(syncgroup, NULL);
     bbupdate();
     tl_reset_timer(maintimer);
@@ -511,13 +528,18 @@ void scene6(void)
     tl_free_timer(maintimer);
     params->bright = 0;
     params->randomval = 0;
-    initlepic();
-    drawptr = mydraw1;
-    timestuff(-60, ctrllepic, draw, 2000000);
-    drawptr = mydraw;
-    /*timestuff(60, NULL, draw, 4 * 1000000); */
-    /*timestuff(20, blur, draw, 4 * 1000000); */
-    timestuff(60, NULL, draw, 3 * 1000000);
+    if (!interactive) {
+	/* Act-2 "epic" text tail: part of the full show, not of the
+	 * standalone interactive session. */
+	initlepic();
+	drawptr = mydraw1;
+	timestuff(-60, ctrllepic, draw, 2000000);
+	drawptr = mydraw;
+	/*timestuff(60, NULL, draw, 4 * 1000000); */
+	/*timestuff(20, blur, draw, 4 * 1000000); */
+	timestuff(60, NULL, draw, 3 * 1000000);
+    }
+    interactive = 0;	/* don't leak into later scenes */
 
 }
 void scene7(void)
@@ -583,7 +605,6 @@ void scene7(void)
     params->bright = 0;
     params->dither = AA_FLOYD_S;
 }
-#if 0
 void scene9(void)
 {
     int width, height, scanline;
@@ -644,4 +665,3 @@ void scene9(void)
     params->bright = 0;
     params->dither = AA_FLOYD_S;
 }
-#endif

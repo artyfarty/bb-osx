@@ -28,6 +28,68 @@
 #include <aalib.h>
 #include "bb.h"
 
+/* aalib's internal per-glyph ink table (see aalib src/aaint.h); the header is
+ * not shipped by the installed build, but the layout is part of the library's
+ * interface (p[4] is the glyph ink, used by the filltable builder). */
+struct parameters {
+    unsigned int p[5];
+};
+
+static int stage = 1;
+/* aalib builds its tables lazily in aa_render, so force the build here to patch
+ * the filltable before the first render. */
+extern unsigned short *aa_mktable(aa_context *);
+/* The stock aalib filltable is a per-intensity argmin-ink-distance pick: it
+ * reaches the correct *average* ink but with uneven band widths (measured on
+ * the real table: '|' owns ~19 of the 256 intensities while 'U' owns just 1).
+ * Sweeping a smooth gradient through it therefore changes glyph at clustered,
+ * uneven intervals, which reads as banding / spurious extra characters in
+ * smooth regions. This remaps the 256 intensities onto the *same* glyph set
+ * but evenly, so every glyph owns 256/n intensities and the ramp is a clean
+ * monotonic gradient. Glyphs are ordered by ink (not by first appearance in
+ * the stock table) so the ramp is monotonic in ink by construction; for the
+ * fonts/masks bb uses (normal+bold+dim, and the -eight block set) aalib's
+ * stock walk is already ink-ordered, so the sort is currently a no-op but
+ * keeps the invariant robust. The uneven bands are the real target: no-dither
+ * (AA_NONE) has no error diffusion and renders them raw, while
+ * Floyd-Steinberg and error-distribution diffuse the quantization error to
+ * neighbours and hide them. Runs on whatever filltable aalib has built. */
+static void bb_even_filltable(aa_context *ctx)
+{
+    unsigned short *ft = ctx->filltable;
+    int seen[256];
+    int g[256];
+    unsigned int ink[256];
+    int n = 0, i, j, v;
+    unsigned short *new;
+    if (ft == NULL)
+	return;
+    memset(seen, 0, sizeof(seen));
+    for (v = 0; v < 256; v++) {
+	unsigned short g0 = ft[v] & 0xff;
+	if (!seen[g0]) {
+	    seen[g0] = 1;
+	    g[n] = g0;
+	    ink[n] = ctx->parameters[g0].p[4];
+	    n++;
+	}
+    }
+    if (n < 2)
+	return;
+    for (i = 1; i < n; i++)
+	for (j = i - 1; j >= 0 && ink[j] > ink[i]; j--) {
+	    unsigned int ti = ink[j]; ink[j] = ink[j+1]; ink[j+1] = ti;
+	    int tg = g[j]; g[j] = g[j+1]; g[j+1] = tg;
+	}
+    new = (unsigned short *) malloc(256 * sizeof(*new));
+    if (new == NULL)
+	return;
+    for (v = 0; v < 256; v++)
+	new[v] = g[(v * (n - 1)) / 255];
+    memcpy(ft, new, 256 * sizeof(*new));
+    free(new);
+}
+
 int finish_stuff, starttime, endtime;
 int dual = 0;
 static int quitnow = 0;
@@ -198,18 +260,35 @@ void bbflushwait(int maxtime)
     bbwait(maxtime);
 }
 
-static int stage = 1;
+
 
 int bbinit(int argc, char **argv)
 {
+    int i;
     aa_defparams.supported|= AA_NORMAL_MASK | AA_BOLD_MASK | AA_DIM_MASK;
     aa_parseoptions(NULL, NULL, &argc, argv);
-    if (argc != 1 && (argc != 2 || ((argv[1][0] <= '0' || argv[1][0] > '8') && strcmp(argv[1], "-loop")))) {
-	printf("Usage: bb [aaoptions] [number]\n\n");
-	printf("Options:\n"
-	       "  -loop          play demo in infinite loop\n\n"
-	       "AAlib options:\n%s\n", aa_help);
-	exit(1);
+    /* After aalib has consumed its own options, the remaining tokens are the
+     * bb-specific ones: "-loop" (loop the demo) and/or a stage number.
+     * 1-3 start an act (1 = full show; 4-8 fall through to the full show, as
+     * in the original), and 6/7/9 are hidden standalone bonus scenes. They
+     * may be given in any order and combination, e.g. "bb -loop 9". */
+    for (i = 1; i < argc; i++) {
+	char *a = argv[i];
+	if (!strcmp(a, "-loop")) {
+	    loopmode = 1;
+	} else if (a[0] >= '1' && a[0] <= '9' && !a[1]) {
+	    stage = atoi(a);
+	} else {
+	    printf("Usage: bb [aaoptions] [-loop] [number]\n\n");
+	    printf("Options:\n"
+		   "  -loop          play demo in infinite loop\n"
+		   "  1, 2, 3        start at act 1, 2 or 3 (1 = full show)\n"
+		   "  6              hidden bonus scene (XaoS fractal zoom, mouse-driven)\n"
+		   "  7              hidden bonus scene (XaoS julia sequence)\n"
+		   "  9              hidden bonus scene (XaoS julia morph)\n"
+		   "AAlib options:\n%s\n", aa_help);
+	    exit(1);
+	}
     }
     context = aa_autoinit(&aa_defparams);
     if (!context) {
@@ -221,10 +300,6 @@ int bbinit(int argc, char **argv)
 	printf("Failed to initialize keyboard\n");
 	exit(3);
     }
-    if (argc == 2 && !strcmp(argv[1], "-loop"))
-	loopmode = 1;
-    else if (argc == 2)
-	stage = atol(argv[1]);
     aa_hidecursor(context);
     return 1;
 }
@@ -242,6 +317,41 @@ int bb(void)
 	finish_stuff = 1;
     do
 	switch (stage) {
+	case 9:
+	case 7:
+	case 6:
+	    /* Standalone bonus scene: one of the three XaoS fractal parts of
+	     * act 2, normally only a brief segment of the full show.
+	     *   6 = fractal zoom (mouse interactive)
+	     *   7 = julia sequence
+	     *   9 = julia morph
+	     * Stood alone it animates in real time, then exits (or repeats
+	     * with -loop). These cases sit before "default:" and each break,
+	     * so the act chain (1 -> 2 -> 3) can never fall through into them. */
+	    finish_stuff = 0;	/* animate (the "stage != 1" fast-forward above set it) */
+	    starttime = endtime = TIME;	/* real-time clock origin for this scene */
+	    aa_resize (context);
+	    if (stage == 6) {
+		/* User-driven fractal explorer: turn autopilot off and use the
+		 * aalib mouse driver. Button 1 (left) zooms in, button 2 (middle)
+		 * zooms out; both are anchored at the cursor position. q / s / ESC to quit. */
+		if (aa_autoinitmouse(context, 0)) {
+		    aa_showcursor(context);
+		    scene6(1);
+		    aa_hidecursor(context);
+		    aa_uninitmouse(context);
+		} else {
+		    printf("Mouse driver unavailable, falling back to autopilot.\n");
+		    scene6(0);
+		}
+	    } else if (stage == 7)
+		scene7();
+	    else
+		scene9();
+	    aa_resize (context);
+	    if (quitnow)
+		goto quit;
+	    break;
 	default:
 	case 1:
 	    load_song("bb.s3m");
@@ -293,7 +403,7 @@ int bb(void)
 	    aa_resize (context);
 	    scene8();
 	    aa_resize (context);
-	    scene6();
+	    scene6(0);
 	    aa_resize (context);
 	case 2:
 	    if (quitnow)
@@ -320,6 +430,9 @@ int bb(void)
 		goto quit;
 	    aa_resize (context);
 	    scene7();
+	    aa_resize (context);
+	    scene9();
+	    aa_resize (context);
 	    if (quitnow)
 		goto quit;
 	    aa_resize (context);

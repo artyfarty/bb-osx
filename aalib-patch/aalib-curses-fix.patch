@@ -1,0 +1,89 @@
+--- a/src/aacurses.c
++++ b/src/aacurses.c
+@@ -22,6 +22,43 @@
+ int __resized_curses;
+ static int uninitcurses;
+ 
++/* Frame synchronization.
++ *
++ * The stdout driver rewrote the whole screen every frame with no
++ * synchronization, so it tore and flickered badly. This curses driver wraps
++ * each frame in the "synchronized update" escape pair:
++ *
++ *     \e[?2026h   begin  (terminal buffers all subsequent output)
++ *     ... frame ...
++ *     \e[?2026l   end    (terminal presents the buffered frame atomically)
++ *
++ * Terminals that implement the protocol (Ghostty, iTerm2, kitty, WezTerm,
++ * Alacritty, xterm) buffer the update and paint it at the retrace, so frames
++ * never tear. Terminals that don't know the mode ignore it, so emitting it
++ * unconditionally is safe. If the termcap also provides v501 (a literal
++ * wait-for-vertical-retrace), that is emitted first as a complement. */
++static int   __curses_sync = 1;
++static const char *__curses_v501;
++
++static void curses_sync_begin(void)
++{
++	if (__curses_v501) {
++		putp(__curses_v501);
++		fflush(stdout);
++	}
++	if (__curses_sync) {
++		putp("\033[?2026h");
++		fflush(stdout);
++	}
++}
++static void curses_sync_end(void)
++{
++	if (__curses_sync) {
++		putp("\033[?2026l");
++		fflush(stdout);
++	}
++}
++
+ static int curses_init(__AA_CONST struct aa_hardware_params *p, __AA_CONST void *none, struct aa_hardware_params *dest, void **param)
+ {
+     int a;
+@@ -47,6 +84,9 @@
+ #else
+     dest->supported |= AA_REVERSE_MASK | AA_DIM_MASK | AA_BOLD_MASK | AA_BOLDFONT_MASK;
+ #endif
++    __curses_v501 = tigetstr("v501");
++    cbreak();
++    noecho();
+     intrflush(stdscr, FALSE);
+     aa_recommendlowkbd("curses");
+     return 1;
+@@ -71,8 +111,7 @@
+ {
+     if (__resized_curses)
+ 	curses_uninit(c), curses_init(&c->params, NULL,&c->driverparams, NULL), __resized_curses = 0;
+-    *width = stdscr->_maxx + 1;
+-    *height = stdscr->_maxy + 1;
++    getmaxyx(stdscr, *height, *width);
+ #ifdef GPM_MOUSEDRIVER
+     gpm_mx = *width;
+     gpm_my = *height;
+@@ -108,7 +147,9 @@
+ }
+ static void curses_flush(aa_context * c)
+ {
++    curses_sync_begin();
+     refresh();
++    curses_sync_end();
+ }
+ static void curses_gotoxy(aa_context * c, int x, int y)
+
+--- a/src/aacurkbd.c
++++ b/src/aacurkbd.c
+@@ -112,7 +112,7 @@
+     case KEY_UP:
+ 	return (AA_UP);
+     case KEY_DOWN:
+ 	return (AA_DOWN);
+-#ifdef KEY_MOUDE
++#ifdef KEY_MOUSE
+     case KEY_MOUSE:
+ #ifdef GPM_MOUSEDRIVER
+ 	if (!__curses_usegpm)
+ {

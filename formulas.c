@@ -69,9 +69,11 @@ char *outcolorname[] =
     "biomorphs decompisition"
 };
 
+#ifndef _RED_
 #define OUTPUT() if(iter>=MAXITER)\
 		return(INT_MAX); else \
 		return(iter)
+#endif
 #ifdef _RED_
 #define OUTPUT() if(iter>=MAXITER)\
 		return(incoloringmode?incolor_output(zre,zim,iter):INT_MAX); else \

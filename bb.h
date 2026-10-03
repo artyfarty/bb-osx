@@ -63,7 +63,7 @@ void scene2(void);
 void scene3(void);
 void scene4(void);
 void scene5(void);
-void scene6(void);
+void scene6(int interactive);
 void scene7(void);
 void scene8(void);
 void scene9(void);
